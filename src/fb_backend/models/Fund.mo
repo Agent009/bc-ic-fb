@@ -3,35 +3,36 @@ import HashMap "mo:base/HashMap";
 import Int "mo:base/Int";
 import Iter "mo:base/Iter";
 import Time "mo:base/Time";
+import Principal "mo:base/Principal";
 import Identity "../lib/Identity";
 import Log "../lib/Log";
-import Member "../lib/Member";
+import Fund "../lib/Fund";
 import Types "../lib/Types";
 
-// TODO: Implement access control so that only members of the fund can interact with the fund.
-actor class Manager(fund_id: Nat, caller: Identity.Account) = {
+actor class Manager(caller: Principal) = {
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
     //  REGION:    PARAMETERS   ----------   ----------   ----------   ----------   ----------   ----------
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
-
+    
     // Aliases, abstractions and types
-    type R = Member.MemberRecord;
+    type R = Fund.FundRecord;
     type Account = Identity.Account;
     // Stable store
     private stable var nextRecordId : Types.RecordId = 0;
-    stable var records : [R] = Member.defaultRecords();
+    stable var records : [R] = Fund.defaultRecords();
     stable var logsEntries : [(Time.Time, Text)] = [];
     // In-memory stores that we can utilise during canister operation. These will be saved to stable memory during upgrades.
-    let debugPrefix = "Models -> MemberManager -> ";
+    let debugPrefix = "Models -> FundManager -> ";
     let logs = HashMap.fromIter<Time.Time, Text>(logsEntries.vals(), Iter.size(logsEntries.vals()), Int.equal, Int.hash);
+    let account : Identity.Account = Identity.getAccountFromPrincipal(caller);
 
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
     //  REGION:     UTILITY     ----------   ----------   ----------   ----------   ----------   ----------
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
 
-    public func getForFund() : async [R] {
-        let filtered = Array.filter<R>(records, func(m) { m.data.fund_id == fund_id });
-        logAndDebug(debug_show("getForFund -> fund", fund_id, "filtered", filtered.size(), " / ", records.size()));
+    public func getForAccount() : async [R] {
+        let filtered = Array.filter<R>(records, func(m) { Identity.accountsEqual(m.data.creator, account) });
+        logAndDebug(debug_show("getForAccount -> account", account, "filtered", filtered.size(), " / ", records.size()));
         return filtered;
     };
 
@@ -39,52 +40,28 @@ actor class Manager(fund_id: Nat, caller: Identity.Account) = {
     //  REGION:       CRUD      ----------   ----------   ----------   ----------   ----------   ----------
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
 
-    public func createRecord(record : Member.Member) : async R {
-        // let f = BaseManager.init_<Member.Member>("Models -> MemberManager", records) |> (
-        //     func(x : R) : async* R {
-        //         await* _.createRecord_c(x);
-        //         _.createRecord_r();
-        //     }
-        // );
-
-        // let newRecord = await* f(record);
-        // logAndDebug(debug_show("Models -> MemberManager -> createRecord -> newRecord", newRecord));
-        // return newRecord;
-
-        let newRecord : R = {id = records.size() + 1; data = { record with fund_id = fund_id }};
-        logAndDebug(debug_show("createRecord -> newRecord -> fund", fund_id, "caller", caller, "newRecord", newRecord));
+    public func createRecord(record : Fund.Fund) : async R {
+        let newRecord : R = {id = records.size() + 1; data = { record with creator = account }};
+        logAndDebug(debug_show("createRecord -> newRecord -> account", account, "newRecord", newRecord));
         records := Array.append(records, [newRecord]);
         return newRecord;
     };
 
     public func getRecord(id : Nat) : async ?R {
-        logAndDebug(debug_show("getRecord -> fund", fund_id, "id", id));
-        return Array.find<R>(await getForFund(), func(m) { m.id == id });
+        logAndDebug(debug_show("getRecord -> id", id));
+        return Array.find<R>(await getForAccount(), func(m) { m.id == id });
     };
 
     public func getRecords() : async [R] {
-        let fundRecords = await getForFund();
-        logAndDebug(debug_show("getrecords -> fund", fund_id, "filtered", fundRecords.size(), " / ", records.size()));
-        return fundRecords;
+        let accountRecords = await getForAccount();
+        logAndDebug(debug_show("getrecords -> account", account, "filtered", accountRecords.size(), " / ", records.size()));
+        return accountRecords;
     };
 
-    // TODO: Implement access control.
-    // Head should be able to update all records within their own funds.
-    // The rest should only be able to update their own record
     public func updateRecord(id : Nat, updated : R) : async ?R {
-        // let f = BaseManager.init_<Member.Member>("Models -> MemberManager", records) |> (
-        //     func(id_ : Nat, updated_: R) : async* ?R {
-        //         await* _.updateRecord_c(id_, updated_);
-        //         _.updateRecord_r();
-        //     }
-        // );
-
-        // let updatedRecord = await* f(id, updated);
-        // logAndDebug(debug_show("updateRecord -> updatedRecord", updatedRecord));
-        // return updatedRecord;
-        let fundRecords = await getForFund();
-        let index = Array.indexOf<R>(updated, fundRecords, func(m1, m2) : Bool { m1.id == m2.id });
-        logAndDebug(debug_show("updateRecord -> fund", fund_id, "caller", caller, "id", id, "updated", updated, "index", index));
+        let accountRecords = await getForAccount();
+        let index = Array.indexOf<R>(updated, accountRecords, func(m1, m2) : Bool { m1.id == m2.id });
+        logAndDebug(debug_show("updateRecord -> id", id, "updated", updated, "index", index));
         let updatedRecords : [var R] = Array.thaw<R>(records);
 
         switch (index) {
@@ -97,11 +74,10 @@ actor class Manager(fund_id: Nat, caller: Identity.Account) = {
         };
     };
 
-    // TODO: Implement access control.
     public func deleteRecord(id : Nat) : async Bool {
         // Find the record but only if it belongs to the account
-        let record = Array.find<R>(records, func(m) { m.id == id and m.data.fund_id == fund_id });
-        logAndDebug(debug_show("deleteRecord -> fund", fund_id, "caller", caller, "id", id, "records", records.size()));
+        let record = Array.find<R>(records, func(m) { m.id == id and Identity.accountsEqual(m.data.creator, account) });
+        logAndDebug(debug_show("deleteRecord -> id", id, "records", records.size()));
 
         switch (record) {
             case null return false;
@@ -109,7 +85,7 @@ actor class Manager(fund_id: Nat, caller: Identity.Account) = {
                 // Delete the record by removing it from the set data
                 let newData = Array.filter<R>(records, func(m) { m.id != r.id });
                 records := newData;
-                logAndDebug(debug_show("deleteRecord -> deleted record belong to fund -> records", records.size()));
+                logAndDebug(debug_show("deleteRecord -> deleted record belong to account -> records", records.size()));
                 return true;
             }
         }
@@ -150,6 +126,6 @@ actor class Manager(fund_id: Nat, caller: Identity.Account) = {
 
     if (nextRecordId < 1) {
         logAndDebug(debug_show("UpgradeManagement -> setting default records"));
-        records := Member.defaultRecords();
+        records := Fund.defaultRecords();
     };
 };

@@ -1,6 +1,57 @@
-# `fb`
+# `Family Bank`
 
-## Running the project locally
+A decentralised take on family-controlled fund management.
+
+### Table of Contents
+
+* [Family Bank Explained](#family-bank-explained)
+  * [What is it?](#what-is-it?)
+    * [Funds](#fund) | [Members](#member) | [Pots](#pot) | [Transactions](#transaction)
+  * [Utilising ckBTC](#utilising-ckbtc)
+* [Setup](#setup)
+  * [Running locally](#running-the-project-locally)
+    * [Environment variables](#note-on-frontend-environment-variables) | [Resolving 403 Issues](#resolving-403-Issues)
+* [Resources](#resources)
+
+## Family Bank Explained
+### What is it?
+
+A family bank is a **fund** managed by closely-related and/or value-aligned members of a family, group, society or organisation.
+The primary goal of the fund is to **grow wealth** collectively through **investments** by managing a diversified portfolio.
+A secondary goal is to allow members to take out a **loan** for various purposes such as emergency spending, house purchase deposit, car purchase, etc. 
+
+**Disclaimer:** Our implementation promotes a **goodly interest-free loan**, also known as [**Qard-al-Hasan**](https://en.wikipedia.org/wiki/Qard_al-Hasan) in *Islamic Jurispudence*. We are strictly against **interest** of any kind, so our implementation makes no effort to support this monetary vehicle.
+
+The major **components** of the family bank are the following:
+
+* [Funds](#fund)
+* [Members](#member)
+* [Pots](#pot)
+* [Transactions](#transaction)
+
+#### Fund
+
+Umbrella structure referring to the assets under management for a group of users. The fund comprises of **members**, **pots**, **transactions** and **assets**.
+
+#### Member
+
+Participating users within a **fund**. Members can have various roles such as **head**, **fund manager**, and **contributor**.
+
+#### Pot
+
+A defined **segment within a fund element, e.g., loan pot, debt repayment pot, etc.
+
+#### Transaction
+
+A record capturing the state of incoming and outgoing assets, as well as intermediary transformations such as currency conversions, stock purchase and sales, and realised losses.
+
+### Utilising ckBTC
+
+* Moving assets between **pots** frictionlessly and with minimal fees.
+* ...
+
+## Setup
+### Running the project locally
 
 If you want to test your project locally, you can use the following commands:
 
@@ -30,7 +81,7 @@ npm start
 
 Which will start a server at `http://localhost:8080`, proxying API requests to the replica at port 4943.
 
-### Note on frontend environment variables
+#### Note on frontend environment variables
 
 If you are hosting frontend code somewhere without using DFX, you may need to make one of the following adjustments to ensure your project does not fetch the root key in production:
 
@@ -47,7 +98,7 @@ If you are hosting frontend code somewhere without using DFX, you may need to ma
 "Content-Security-Policy": "default-src 'self';script-src 'self';connect-src 'self' http://127.0.0.1:* http://localhost:* https://icp0.io https://*.icp0.io https://icp-api.io;img-src 'self' data:;style-src * 'unsafe-inline';style-src-elem * 'unsafe-inline';font-src *;object-src 'none';base-uri 'self';frame-ancestors 'none';form-action 'self';upgrade-insecure-requests;"
 ```
 
-### Resolving 403 Issues
+#### Resolving 403 Issues
 
 In the **local** environment, this is usually due to using the network Internet Identity provider instead of using the [local instance](https://internetcomputer.org/docs/current/tutorials/developer-journey/level-3/3.5-identities-and-auth#importing-the-auth-client-package).
 
@@ -58,11 +109,16 @@ Also:
 * Use URLs of the format `http://{asset_canister_id}.localhost:4943` instead of `http://localhost:4943/?canisterId={asset_canister_id}`
 * For candid, you would use the following URL: `http://{candid_canister_id}.localhost:4943/?id={target_canister_id}`
 
+## Roadmap
+
+* **SNS DAO** implementation to make owners of funds governance token the custodians of their respective funds.
+* **DEX** integration to enable hassle-free swaps for managing the investment portfolio.
+
 ## Resources
 
 ```bash
-dfx build fb-frontend
-dfx canister install fb-frontend --mode='reinstall'
+dfx build fb_frontend
+dfx canister install fb_frontend --mode='reinstall'
 ```
 
 - [Quick Start](https://internetcomputer.org/docs/current/developer-docs/setup/deploy-locally)
