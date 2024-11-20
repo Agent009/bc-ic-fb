@@ -9,9 +9,8 @@ import Identity "lib/Identity";
 import Fund "lib/Fund";
 import Member "lib/Member";
 import Pot "lib/Pot";
-import MemberManager "models/Member";
-import PotManager "models/Pot";
 import Log "lib/Log";
+import Types "lib/Types";
 
 // shared ({ caller = creator }) actor class fb(init : ?Types.InitPayload) = Self {
 shared ({ caller = creator }) actor class fb() = Self {
@@ -25,7 +24,13 @@ shared ({ caller = creator }) actor class fb() = Self {
     // Stable stores
     // private stable var members : Trie.Trie<Types.RecordId, Member.MemberRecord> = Trie.empty();
     // private stable var pots : Trie.Trie<Types.RecordId, Pot.PotRecord> = Trie.empty();
+    // TODO: Implement next ID
+    private stable var nextFundId : Types.RecordId = 0;
+    private stable var nextMemberId : Types.RecordId = 0;
+    private stable var nextPotId : Types.RecordId = 0;
     stable var funds : [Fund.FundRecord] = Fund.defaultRecords();
+    stable var members : [Member.MemberRecord] = Member.defaultRecords();
+    stable var pots : [Pot.PotRecord] = Pot.defaultRecords();
     stable var logsEntries : [(Time.Time, Text)] = [];
 
     // In-memory stores that we can utilise during canister operation. These will be saved to stable memory during upgrades.
@@ -75,7 +80,7 @@ shared ({ caller = creator }) actor class fb() = Self {
     // ADMIN function
     public shared ({ caller }) func getFundsFor(account: Principal) : async [Fund.FundRecord] {
         if (not isCanisterCreator(caller)) {
-            logAndDebug(debug_show("getFundsFor -> caller not creator, disallowed -> caller", caller, "creator", creator));
+            logAndDebug(debug_show("FUNDS -> getFundsFor -> caller not creator, disallowed -> caller", caller, "creator", creator));
             throw Error.reject("Unauthorized");
         };
 
@@ -113,7 +118,7 @@ shared ({ caller = creator }) actor class fb() = Self {
                 // Delete the record by removing it from the set data
                 let updatedRecords = Array.filter<Fund.FundRecord>(funds, func(m) { m.id != id });
                 funds := updatedRecords;
-                logAndDebug(debug_show("deleteRecord -> deleted record -> records", funds.size()));
+                logAndDebug(debug_show("FUNDS -> deleteRecord -> deleted record -> records", funds.size()));
                 return true;
             }
         }
@@ -124,28 +129,55 @@ shared ({ caller = creator }) actor class fb() = Self {
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
 
     public shared ({ caller }) func addMember(record: Member.Member, fund_id: Nat) : async Member.MemberRecord {
-        let manager = await MemberManager.Manager(fund_id, Identity.getAccountFromPrincipal(caller));
-        await manager.createRecord(record);
+        let manager = Member.Manager(fund_id, Identity.getAccountFromPrincipal(caller), members);// Check and receive the record to be added with additional properties.
+        let newRecord = await manager.createRecord(record);
+        // Commit the new record to the state.
+        members := Array.append(members, [newRecord]);
+        return newRecord;
     };
 
     public shared ({ caller }) func getMember(id: Nat, fund_id: Nat) : async ?Member.MemberRecord {
-        let manager = await MemberManager.Manager(fund_id, Identity.getAccountFromPrincipal(caller));
+        let manager = Member.Manager(fund_id, Identity.getAccountFromPrincipal(caller), members);
         await manager.getRecord(id);
     };
 
     public shared ({ caller }) func getMembers(fund_id: Nat) : async [Member.MemberRecord] {
-        let manager = await MemberManager.Manager(fund_id, Identity.getAccountFromPrincipal(caller));
+        let manager = Member.Manager(fund_id, Identity.getAccountFromPrincipal(caller), members);
         await manager.getRecords();
     };
 
-    public shared ({ caller }) func updateMember(id: Nat, updated: Member.MemberRecord, fund_id: Nat) : async ?Member.MemberRecord {
-        let manager = await MemberManager.Manager(fund_id, Identity.getAccountFromPrincipal(caller));
-        await manager.updateRecord(id, updated);
+    public shared ({ caller }) func updateMember(id: Nat, updated: Member.Member, fund_id: Nat) : async ?Member.MemberRecord {
+        let manager = Member.Manager(fund_id, Identity.getAccountFromPrincipal(caller), members);
+        // Check if the record can be updated. Will receive the index on success.
+        let data = await manager.updateRecord(id, updated);
+        let updatedRecords : [var Member.MemberRecord] = Array.thaw<Member.MemberRecord>(members);
+
+        switch (data) {
+            case (?d) {
+                // Commit the updated record to the state.
+                updatedRecords[d.index] := d.record;
+                members := Array.freeze<Member.MemberRecord>(updatedRecords);
+                return ?d.record;
+            };
+            case null return null;
+        };
     };
 
     public shared ({ caller }) func deleteMember(id: Nat, fund_id: Nat) : async Bool {
-        let manager = await MemberManager.Manager(fund_id, Identity.getAccountFromPrincipal(caller));
-        await manager.deleteRecord(id);
+        let manager = Member.Manager(fund_id, Identity.getAccountFromPrincipal(caller), members);
+        // Check if the record can be deleted. Will receive the record ID on success.
+        let recordId = await manager.deleteRecord(id);
+
+        switch (recordId) {
+            case null return false;
+            case (?id) {
+                // Delete the record by removing it from the set data
+                let updatedRecords = Array.filter<Member.MemberRecord>(members, func(m) { m.id != id });
+                members := updatedRecords;
+                logAndDebug(debug_show("MEMBERS -> deleteRecord -> deleted record -> records", funds.size()));
+                return true;
+            }
+        }
     };
 
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
@@ -153,28 +185,56 @@ shared ({ caller = creator }) actor class fb() = Self {
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
 
     public shared ({ caller }) func addPot(record: Pot.Pot, fund_id: Nat) : async Pot.PotRecord {
-        let manager = await PotManager.Manager(fund_id, Identity.getAccountFromPrincipal(caller));
-        await manager.createRecord(record);
+        let manager = Pot.Manager(fund_id, Identity.getAccountFromPrincipal(caller), pots);
+        // Check and receive the record to be added with additional properties.
+        let newRecord = await manager.createRecord(record);
+        // Commit the new record to the state.
+        pots := Array.append(pots, [newRecord]);
+        return newRecord;
     };
 
     public shared ({ caller }) func getPot(id: Nat, fund_id: Nat) : async ?Pot.PotRecord {
-        let manager = await PotManager.Manager(fund_id, Identity.getAccountFromPrincipal(caller));
+        let manager = Pot.Manager(fund_id, Identity.getAccountFromPrincipal(caller), pots);
         await manager.getRecord(id);
     };
 
     public shared ({ caller }) func getPots(fund_id: Nat) : async [Pot.PotRecord] {
-        let manager = await PotManager.Manager(fund_id, Identity.getAccountFromPrincipal(caller));
+        let manager = Pot.Manager(fund_id, Identity.getAccountFromPrincipal(caller), pots);
         await manager.getRecords();
     };
 
-    public shared ({ caller }) func updatePot(id: Nat, updated: Pot.PotRecord, fund_id: Nat) : async ?Pot.PotRecord {
-        let manager = await PotManager.Manager(fund_id, Identity.getAccountFromPrincipal(caller));
-        await manager.updateRecord(id, updated);
+    public shared ({ caller }) func updatePot(id: Nat, updated: Pot.Pot, fund_id: Nat) : async ?Pot.PotRecord {
+        let manager = Pot.Manager(fund_id, Identity.getAccountFromPrincipal(caller), pots);
+        // Check if the record can be updated. Will receive the index on success.
+        let data = await manager.updateRecord(id, updated);
+        let updatedRecords : [var Pot.PotRecord] = Array.thaw<Pot.PotRecord>(pots);
+
+        switch (data) {
+            case (?d) {
+                // Commit the updated record to the state.
+                updatedRecords[d.index] := d.record;
+                pots := Array.freeze<Pot.PotRecord>(updatedRecords);
+                return ?d.record;
+            };
+            case null return null;
+        };
     };
 
     public shared ({ caller }) func deletePot(id: Nat, fund_id: Nat) : async Bool {
-        let manager = await PotManager.Manager(fund_id, Identity.getAccountFromPrincipal(caller));
-        await manager.deleteRecord(id);
+        let manager = Pot.Manager(fund_id, Identity.getAccountFromPrincipal(caller), pots);
+        // Check if the record can be deleted. Will receive the record ID on success.
+        let recordId = await manager.deleteRecord(id);
+
+        switch (recordId) {
+            case null return false;
+            case (?id) {
+                // Delete the record by removing it from the set data
+                let updatedRecords = Array.filter<Pot.PotRecord>(pots, func(m) { m.id != id });
+                pots := updatedRecords;
+                logAndDebug(debug_show("POTS -> deleteRecord -> deleted record -> records", funds.size()));
+                return true;
+            }
+        }
     };
 
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
