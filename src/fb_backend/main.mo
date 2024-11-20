@@ -1,4 +1,5 @@
 import Array "mo:base/Array";
+import Cycles "mo:base/ExperimentalCycles";
 import HashMap "mo:base/HashMap";
 import Int "mo:base/Int";
 import Iter "mo:base/Iter";
@@ -8,7 +9,6 @@ import Identity "lib/Identity";
 import Fund "lib/Fund";
 import Member "lib/Member";
 import Pot "lib/Pot";
-import FundManager "models/Fund";
 import MemberManager "models/Member";
 import PotManager "models/Pot";
 import Log "lib/Log";
@@ -25,6 +25,7 @@ shared ({ caller = creator }) actor class fb() = Self {
     // Stable stores
     // private stable var members : Trie.Trie<Types.RecordId, Member.MemberRecord> = Trie.empty();
     // private stable var pots : Trie.Trie<Types.RecordId, Pot.PotRecord> = Trie.empty();
+    stable var funds : [Fund.FundRecord] = Fund.defaultRecords();
     stable var logsEntries : [(Time.Time, Text)] = [];
 
     // In-memory stores that we can utilise during canister operation. These will be saved to stable memory during upgrades.
@@ -48,21 +49,26 @@ shared ({ caller = creator }) actor class fb() = Self {
     };
 
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
-    //  REGION:       FUNDS     ----------   ----------   ----------   ----------   ----------   ----------
+    //  REGION:      FUNDS         CRUD      ----------   ----------   ----------   ----------   ----------
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
 
+    // dfx canister call fb_backend addFund(record {creator=record {owner=principal "7eevz-2ra7p-dsih3-3tyar-ve5rp-gfzj4-6oopo-7lno4-miffl-jj4mm-wqe"; subaccount=null}; name="Family Bank"; closing_date=null; start_date="2024-11-20"})
     public shared ({ caller }) func addFund(record: Fund.Fund) : async Fund.FundRecord {
-        let manager = await FundManager.Manager(caller);
-        await manager.createRecord(record);
+        let manager = Fund.Manager(caller, funds);
+        // Check and receive the record to be added with additional properties.
+        let newRecord = await manager.createRecord(record);
+        // Commit the new record to the state.
+        funds := Array.append(funds, [newRecord]);
+        return newRecord;
     };
 
     public shared ({ caller }) func getFund(id: Nat) : async ?Fund.FundRecord {
-        let manager = await FundManager.Manager(caller);
+        let manager = Fund.Manager(caller, funds);
         await manager.getRecord(id);
     };
 
     public shared ({ caller }) func getFunds() : async [Fund.FundRecord] {
-        let manager = await FundManager.Manager(caller);
+        let manager = Fund.Manager(caller, funds);
         await manager.getRecords();
     };
 
@@ -73,22 +79,48 @@ shared ({ caller = creator }) actor class fb() = Self {
             throw Error.reject("Unauthorized");
         };
 
-        let manager = await FundManager.Manager(account);
+        let manager = Fund.Manager(account, funds);
         await manager.getRecords();
     };
 
-    public shared ({ caller }) func updateFund(id: Nat, updated: Fund.FundRecord) : async ?Fund.FundRecord {
-        let manager = await FundManager.Manager(caller);
-        await manager.updateRecord(id, updated);
+    // dfx canister call fb_backend updateFund(1, record {data=record {creator=record {owner=principal "2vxsx-fae"; subaccount=null}; name="FB"; closing_date=null; start_date="2024-11-19"}})
+    public shared ({ caller }) func updateFund(id: Nat, updated: Fund.Fund) : async ?Fund.FundRecord {
+        let manager = Fund.Manager(caller, funds);
+        // Check if the record can be updated. Will receive the index on success.
+        let data = await manager.updateRecord(id, updated);
+        let updatedRecords : [var Fund.FundRecord] = Array.thaw<Fund.FundRecord>(funds);
+
+        switch (data) {
+            case (?d) {
+                // Commit the updated record to the state.
+                updatedRecords[d.index] := d.record;
+                funds := Array.freeze<Fund.FundRecord>(updatedRecords);
+                return ?d.record;
+            };
+            case null return null;
+        };
     };
 
+    // dfx canister call fb_backend deleteFund(1)
     public shared ({ caller }) func deleteFund(id: Nat) : async Bool {
-        let manager = await FundManager.Manager(caller);
-        await manager.deleteRecord(id);
+        let manager = Fund.Manager(caller, funds);
+        // Check if the record can be deleted. Will receive the record ID on success.
+        let recordId = await manager.deleteRecord(id);
+
+        switch (recordId) {
+            case null return false;
+            case (?id) {
+                // Delete the record by removing it from the set data
+                let updatedRecords = Array.filter<Fund.FundRecord>(funds, func(m) { m.id != id });
+                funds := updatedRecords;
+                logAndDebug(debug_show("deleteRecord -> deleted record -> records", funds.size()));
+                return true;
+            }
+        }
     };
 
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
-    //  REGION:      MEMBERS    ----------   ----------   ----------   ----------   ----------   ----------
+    //  REGION:      MEMBERS       CRUD      ----------   ----------   ----------   ----------   ----------
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
 
     public shared ({ caller }) func addMember(record: Member.Member, fund_id: Nat) : async Member.MemberRecord {
@@ -117,7 +149,7 @@ shared ({ caller = creator }) actor class fb() = Self {
     };
 
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
-    //  REGION:       POTS      ----------   ----------   ----------   ----------   ----------   ----------
+    //  REGION:       POTS         CRUD      ----------   ----------   ----------   ----------   ----------
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
 
     public shared ({ caller }) func addPot(record: Pot.Pot, fund_id: Nat) : async Pot.PotRecord {
@@ -143,6 +175,30 @@ shared ({ caller = creator }) actor class fb() = Self {
     public shared ({ caller }) func deletePot(id: Nat, fund_id: Nat) : async Bool {
         let manager = await PotManager.Manager(fund_id, Identity.getAccountFromPrincipal(caller));
         await manager.deleteRecord(id);
+    };
+
+    //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
+    //  REGION:      CYCLES     MANAGEMENT   ----------   ----------   ----------   ----------   ----------
+    //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
+
+    public shared (_) func getCyclesAvailable() : async Nat {
+        //logAndDebug(debug_show ("getCyclesAvailable -> msg", msg, "owner", owner));
+        //assert (msg.caller == creator);
+        logAndDebug(debug_show ("getCyclesAvailable ->", Cycles.available()));
+        return Cycles.available()
+    };
+
+    public shared (_) func getCyclesBalance() : async Nat {
+        //assert (msg.caller == creator);
+        logAndDebug(debug_show ("getCyclesBalance ->", Cycles.balance()));
+        return Cycles.balance()
+    };
+
+    public shared (_) func addCycles(amount : Nat) : async Nat {
+        //assert (msg.caller == creator);
+        let accepted = Cycles.accept<system>(amount);
+        logAndDebug(debug_show ("addCycles -> amount", amount, "accepted", accepted));
+        return accepted
     };
 
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
