@@ -3,28 +3,21 @@ import Identity "../Identity";
 import Log "../Log";
 import Types "../Types";
 
-module Transaction {
+module Account {
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
     //  REGION:      MODULE     DEFINITION   ----------   ----------   ----------   ----------   ----------
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
 
-    public type Transaction = {
+    public type Account = {
         fund_id: Types.RecordId;
         member_id: Types.RecordId;
         type1: Text;
-        type2: ?Text;
-        category: ?Text;
-        amount: Float;
-        date: ?Text;
-        from_account_id: ?Types.RecordId;
-        to_account_id: ?Types.RecordId;
-        from_pot_id: ?Types.RecordId;
-        to_pot_id: ?Types.RecordId;
+        name: Text;
         details: ?Text;
     };
-    public type TransactionRecord = Types.Record<Transaction>;
+    public type AccountRecord = Types.Record<Account>;
 
-    public func defaultRecords() : [TransactionRecord] {
+    public func defaultRecords() : [AccountRecord] {
         return [];
     };
 
@@ -32,15 +25,15 @@ module Transaction {
     //  REGION:      MANAGER       CLASS     ----------   ----------   ----------   ----------   ----------
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
 
-    public class Manager(fund_id: Types.RecordId, caller: Identity.Account, records: [TransactionRecord]) = {
+    public class Manager(fund_id: Types.RecordId, caller: Identity.Account, records: [AccountRecord]) = {
         //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
         //  REGION:    PARAMETERS   ----------   ----------   ----------   ----------   ----------   ----------
         //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
         
         // Aliases, abstractions and types
-        type R = Transaction.TransactionRecord;
+        type R = Account.AccountRecord;
         type Account = Identity.Account;
-        let debugPrefix = "Models -> TransactionManager -> ";
+        let debugPrefix = "Models -> AccountManager -> ";
 
         //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
         //  REGION:     UTILITY     ----------   ----------   ----------   ----------   ----------   ----------
@@ -58,12 +51,8 @@ module Transaction {
 
         // Send back the record to be created with the additional properties.
         // The caller should update the state variable with the new record.
-        public func createRecord(record : Transaction.Transaction, id: Types.RecordId, member_id: Types.RecordId) : async R {
+        public func createRecord(record : Account.Account, id: Types.RecordId, member_id: Types.RecordId) : async R {
             let newRecord : R = {id = id; data = { record with fund_id = fund_id; member_id = member_id }};
-            // TODO: Validation to ensure the following exist and belong to the specified fund.
-            // From/to account, from/to pot, member_id
-            // TODO: Validation to ensure type1/2/cat are correct.
-            // TODO: Validation to ensure amount validates properly.
             logAndDebug(debug_show("createRecord -> newRecord -> fund", fund_id, "member", member_id, "caller", caller, "newRecord", newRecord));
             return newRecord;
         };
@@ -81,7 +70,7 @@ module Transaction {
 
         // Send back the index if the record can be updated.
         // The caller should update the state variable with the updated record.
-        public func updateRecord(id : Types.RecordId, updated : Transaction.Transaction) : async ?{ index: Nat; record: R } {
+        public func updateRecord(id : Types.RecordId, updated : Account.Account) : async ?{ index: Nat; record: R } {
             let fundRecords = await getForFund();
             let updatedRecord = { id = id; data = updated };
             let index = Array.indexOf<R>(updatedRecord, fundRecords, func(m1, m2) : Bool { m1.id == m2.id });

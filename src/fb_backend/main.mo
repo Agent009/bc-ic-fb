@@ -6,6 +6,7 @@ import Iter "mo:base/Iter";
 import Time "mo:base/Time";
 import Error "mo:base/Error";
 import Identity "lib/Identity";
+import Account "lib/model/Account";
 import Fund "lib/model/Fund";
 import Member "lib/model/Member";
 import Pot "lib/model/Pot";
@@ -26,10 +27,12 @@ shared ({ caller = creator }) actor class fb() = Self {
     // Stable stores
     // private stable var members : Trie.Trie<Types.RecordId, Member.MemberRecord> = Trie.empty();
     // private stable var pots : Trie.Trie<Types.RecordId, Pot.PotRecord> = Trie.empty();
+    private stable var nextAccountId : Types.RecordId = 0;
     private stable var nextFundId : Types.RecordId = 0;
     private stable var nextMemberId : Types.RecordId = 0;
     private stable var nextPotId : Types.RecordId = 0;
     private stable var nextTxId : Types.RecordId = 0;
+    stable var accounts : [Account.AccountRecord] = Account.defaultRecords();
     stable var funds : [Fund.FundRecord] = Fund.defaultRecords();
     stable var members : [Member.MemberRecord] = Member.defaultRecords();
     stable var pots : [Pot.PotRecord] = Pot.defaultRecords();
@@ -297,6 +300,65 @@ shared ({ caller = creator }) actor class fb() = Self {
                 let updatedRecords = Array.filter<Transaction.TransactionRecord>(transactions, func(m) { m.id != id });
                 transactions := updatedRecords;
                 logAndDebug(debug_show("TRANSACTIONS -> deleteRecord -> deleted record -> records", funds.size()));
+                return true;
+            }
+        }
+    };
+
+
+    //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
+    //  REGION:     ACCOUNTS       CRUD      ----------   ----------   ----------   ----------   ----------
+    //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
+
+    public shared ({ caller }) func addAccount(record: Account.Account, fund_id: ID, member_id: ID) : async Account.AccountRecord {
+        let manager = Account.Manager(fund_id, Identity.getAccountFromPrincipal(caller), accounts);
+        // Check and receive the record to be added with additional properties.
+        nextAccountId += 1;
+        let newRecord = await manager.createRecord(record, nextAccountId, member_id);
+        // Commit the new record to the state.
+        accounts := Array.append(accounts, [newRecord]);
+        return newRecord;
+    };
+
+    public shared ({ caller }) func getAccount(id: ID, fund_id: ID) : async ?Account.AccountRecord {
+        let manager = Account.Manager(fund_id, Identity.getAccountFromPrincipal(caller), accounts);
+        await manager.getRecord(id);
+    };
+
+    public shared ({ caller }) func getAccounts(fund_id: ID) : async [Account.AccountRecord] {
+        let manager = Account.Manager(fund_id, Identity.getAccountFromPrincipal(caller), accounts);
+        await manager.getRecords();
+    };
+
+    public shared ({ caller }) func updateAccount(id: ID, updated: Account.Account, fund_id: ID) : async ?Account.AccountRecord {
+        let manager = Account.Manager(fund_id, Identity.getAccountFromPrincipal(caller), accounts);
+        // Check if the record can be updated. Will receive the index on success.
+        let data = await manager.updateRecord(id, updated);
+        let updatedRecords : [var Account.AccountRecord] = Array.thaw<Account.AccountRecord>(accounts);
+
+        switch (data) {
+            case (?d) {
+                // Commit the updated record to the state.
+                updatedRecords[d.index] := d.record;
+                accounts := Array.freeze<Account.AccountRecord>(updatedRecords);
+                return ?d.record;
+            };
+            case null return null;
+        };
+    };
+
+    public shared ({ caller }) func deleteAccount(id: ID, fund_id: ID) : async Bool {
+        let manager = Account.Manager(fund_id, Identity.getAccountFromPrincipal(caller), accounts);
+        // Check if the record can be deleted. Will receive the record ID on success.
+        let recordId = await manager.deleteRecord(id);
+
+        switch (recordId) {
+            case null return false;
+            case (?id) {
+                // Delete the record by removing it from the set data
+                let updatedRecords = Array.filter<Account.AccountRecord>(accounts, func(m) { m.id != id });
+                accounts := updatedRecords;
+                logAndDebug(debug_show("ACCOUNTS -> deleteRecord -> deleted record -> records", funds.size()));
                 return true;
             }
         }
