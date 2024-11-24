@@ -53,7 +53,7 @@ module Member {
     //  REGION:      MANAGER       CLASS     ----------   ----------   ----------   ----------   ----------
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
 
-    public class Manager(fund_id: Nat, caller: Identity.Account, records: [MemberRecord]) = {
+    public class Manager(fund_id: Types.RecordId, caller: Identity.Account, records: [MemberRecord]) = {
         //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
         //  REGION:    PARAMETERS   ----------   ----------   ----------   ----------   ----------   ----------
         //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
@@ -85,7 +85,7 @@ module Member {
             return newRecord;
         };
 
-        public func getRecord(id : Nat) : async ?R {
+        public func getRecord(id : Types.RecordId) : async ?R {
             logAndDebug(debug_show("getRecord -> fund", fund_id, "id", id));
             return Array.find<R>(await getForFund(), func(m) { m.id == id });
         };
@@ -98,7 +98,7 @@ module Member {
 
         // Send back the index if the record can be updated.
         // The caller should update the state variable with the updated record.
-        public func updateRecord(id : Nat, updated : Member.Member) : async ?{ index: Nat; record: R } {
+        public func updateRecord(id : Types.RecordId, updated : Member.Member) : async ?{ index: Nat; record: R } {
             let fundRecords = await getForFund();
             let updatedRecord = { id = id; data = updated };
             let index = Array.indexOf<R>(updatedRecord, fundRecords, func(m1, m2) : Bool { m1.id == m2.id });
@@ -114,7 +114,7 @@ module Member {
 
         // Send back the record ID if the record can be deleted.
         // The caller should remove the record to be deleted from the state variable.
-        public func deleteRecord(id : Nat) : async ?Types.RecordId {
+        public func deleteRecord(id : Types.RecordId) : async ?Types.RecordId {
             // Find the record but only if it belongs to the account
             let record = Array.find<R>(records, func(m) { m.id == id and m.data.fund_id == fund_id });
             logAndDebug(debug_show("deleteRecord -> fund", fund_id, "caller", caller, "id", id, "records", records.size()));
