@@ -6,9 +6,9 @@ import Iter "mo:base/Iter";
 import Time "mo:base/Time";
 import Error "mo:base/Error";
 import Identity "lib/Identity";
-import Fund "lib/Fund";
-import Member "lib/Member";
-import Pot "lib/Pot";
+import Fund "lib/model/Fund";
+import Member "lib/model/Member";
+import Pot "lib/model/Pot";
 import Log "lib/Log";
 import Types "lib/Types";
 

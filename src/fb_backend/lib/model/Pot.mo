@@ -1,7 +1,7 @@
 import Array "mo:base/Array";
-import Identity "../lib/Identity";
-import Log "../lib/Log";
-import Types "../lib/Types";
+import Identity "../Identity";
+import Log "../Log";
+import Types "../Types";
 
 module Pot {
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
