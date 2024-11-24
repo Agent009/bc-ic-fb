@@ -64,8 +64,8 @@ module Pot {
 
         // Send back the record to be created with the additional properties.
         // The caller should update the state variable with the new record.
-        public func createRecord(record : Pot.Pot) : async R {
-            let newRecord : R = {id = records.size() + 1; data = { record with fund_id = fund_id }};
+        public func createRecord(record : Pot.Pot, id: Types.RecordId) : async R {
+            let newRecord : R = {id = id; data = { record with fund_id = fund_id }};
             logAndDebug(debug_show("createRecord -> newRecord -> fund", fund_id, "caller", caller, "newRecord", newRecord));
             return newRecord;
         };

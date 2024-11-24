@@ -24,7 +24,6 @@ shared ({ caller = creator }) actor class fb() = Self {
     // Stable stores
     // private stable var members : Trie.Trie<Types.RecordId, Member.MemberRecord> = Trie.empty();
     // private stable var pots : Trie.Trie<Types.RecordId, Pot.PotRecord> = Trie.empty();
-    // TODO: Implement next ID
     private stable var nextFundId : Types.RecordId = 0;
     private stable var nextMemberId : Types.RecordId = 0;
     private stable var nextPotId : Types.RecordId = 0;
@@ -61,7 +60,8 @@ shared ({ caller = creator }) actor class fb() = Self {
     public shared ({ caller }) func addFund(record: Fund.Fund) : async Fund.FundRecord {
         let manager = Fund.Manager(caller, funds);
         // Check and receive the record to be added with additional properties.
-        let newRecord = await manager.createRecord(record);
+        nextFundId += 1;
+        let newRecord = await manager.createRecord(record, nextFundId);
         // Commit the new record to the state.
         funds := Array.append(funds, [newRecord]);
         return newRecord;
@@ -129,8 +129,10 @@ shared ({ caller = creator }) actor class fb() = Self {
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
 
     public shared ({ caller }) func addMember(record: Member.Member, fund_id: Nat) : async Member.MemberRecord {
-        let manager = Member.Manager(fund_id, Identity.getAccountFromPrincipal(caller), members);// Check and receive the record to be added with additional properties.
-        let newRecord = await manager.createRecord(record);
+        let manager = Member.Manager(fund_id, Identity.getAccountFromPrincipal(caller), members);
+        // Check and receive the record to be added with additional properties.
+        nextMemberId += 1;
+        let newRecord = await manager.createRecord(record, nextMemberId);
         // Commit the new record to the state.
         members := Array.append(members, [newRecord]);
         return newRecord;
@@ -187,7 +189,8 @@ shared ({ caller = creator }) actor class fb() = Self {
     public shared ({ caller }) func addPot(record: Pot.Pot, fund_id: Nat) : async Pot.PotRecord {
         let manager = Pot.Manager(fund_id, Identity.getAccountFromPrincipal(caller), pots);
         // Check and receive the record to be added with additional properties.
-        let newRecord = await manager.createRecord(record);
+        nextPotId += 1;
+        let newRecord = await manager.createRecord(record, nextPotId);
         // Commit the new record to the state.
         pots := Array.append(pots, [newRecord]);
         return newRecord;

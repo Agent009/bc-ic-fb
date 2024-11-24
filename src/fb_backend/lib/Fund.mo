@@ -63,8 +63,8 @@ module Fund {
 
         // Send back the record to be created with the additional properties.
         // The caller should update the state variable with the new record.
-        public func createRecord(record : Fund.Fund) : async R {
-            let newRecord : R = {id = records.size() + 1; data = record}; //  data = { record with creator = account }
+        public func createRecord(record : Fund.Fund, id: Types.RecordId) : async R {
+            let newRecord : R = {id = id; data = record}; //  data = { record with creator = account }
             logAndDebug(debug_show("createRecord -> newRecord -> account", account, "newRecord", newRecord));
             return newRecord;
         };
