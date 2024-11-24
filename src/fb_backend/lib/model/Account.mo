@@ -51,9 +51,9 @@ module Account {
 
         // Send back the record to be created with the additional properties.
         // The caller should update the state variable with the new record.
-        public func createRecord(record : Account.Account, id: Types.RecordId, member_id: Types.RecordId) : async R {
-            let newRecord : R = {id = id; data = { record with fund_id = fund_id; member_id = member_id }};
-            logAndDebug(debug_show("createRecord -> newRecord -> fund", fund_id, "member", member_id, "caller", caller, "newRecord", newRecord));
+        public func createRecord(record : Account.Account, id: Types.RecordId) : async R {
+            let newRecord : R = {id = id; data = { record with fund_id = fund_id }};
+            logAndDebug(debug_show("createRecord -> newRecord -> fund", fund_id, "caller", caller, "newRecord", newRecord));
             return newRecord;
         };
 

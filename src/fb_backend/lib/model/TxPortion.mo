@@ -3,28 +3,25 @@ import Identity "../Identity";
 import Log "../Log";
 import Types "../Types";
 
-module Transaction {
+module TxPortion {
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
     //  REGION:      MODULE     DEFINITION   ----------   ----------   ----------   ----------   ----------
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
 
-    public type Transaction = {
+    public type TxPortion = {
         fund_id: Types.RecordId;
+        tx_id: Types.RecordId;
         member_id: Types.RecordId;
         type1: Text;
         type2: ?Text;
         category: ?Text;
         amount: Float;
         date: ?Text;
-        from_account_id: ?Types.RecordId;
-        to_account_id: ?Types.RecordId;
-        from_pot_id: ?Types.RecordId;
-        to_pot_id: ?Types.RecordId;
         details: ?Text;
     };
-    public type TransactionRecord = Types.Record<Transaction>;
+    public type TxPortionRecord = Types.Record<TxPortion>;
 
-    public func defaultRecords() : [TransactionRecord] {
+    public func defaultRecords() : [TxPortionRecord] {
         return [];
     };
 
@@ -32,15 +29,15 @@ module Transaction {
     //  REGION:      MANAGER       CLASS     ----------   ----------   ----------   ----------   ----------
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
 
-    public class Manager(fund_id: Types.RecordId, caller: Identity.Account, records: [TransactionRecord]) = {
+    public class Manager(fund_id: Types.RecordId, caller: Identity.Account, records: [TxPortionRecord]) = {
         //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
         //  REGION:    PARAMETERS   ----------   ----------   ----------   ----------   ----------   ----------
         //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
         
         // Aliases, abstractions and types
-        type R = Transaction.TransactionRecord;
+        type R = TxPortion.TxPortionRecord;
         type Account = Identity.Account;
-        let debugPrefix = "Models -> TransactionManager -> ";
+        let debugPrefix = "Models -> TxPortionManager -> ";
 
         //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
         //  REGION:     UTILITY     ----------   ----------   ----------   ----------   ----------   ----------
@@ -58,7 +55,7 @@ module Transaction {
 
         // Send back the record to be created with the additional properties.
         // The caller should update the state variable with the new record.
-        public func createRecord(record : Transaction.Transaction, id: Types.RecordId) : async R {
+        public func createRecord(record : TxPortion.TxPortion, id: Types.RecordId) : async R {
             let newRecord : R = {id = id; data = { record with fund_id = fund_id }};
             // TODO: Validation to ensure the following exist and belong to the specified fund.
             // From/to account, from/to pot, member_id
@@ -81,7 +78,7 @@ module Transaction {
 
         // Send back the index if the record can be updated.
         // The caller should update the state variable with the updated record.
-        public func updateRecord(id : Types.RecordId, updated : Transaction.Transaction) : async ?{ index: Nat; record: R } {
+        public func updateRecord(id : Types.RecordId, updated : TxPortion.TxPortion) : async ?{ index: Nat; record: R } {
             let fundRecords = await getForFund();
             let updatedRecord = { id = id; data = updated };
             let index = Array.indexOf<R>(updatedRecord, fundRecords, func(m1, m2) : Bool { m1.id == m2.id });

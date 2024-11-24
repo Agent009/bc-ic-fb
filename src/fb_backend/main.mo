@@ -11,6 +11,7 @@ import Fund "lib/model/Fund";
 import Member "lib/model/Member";
 import Pot "lib/model/Pot";
 import Transaction "lib/model/Transaction";
+import TxPortion "lib/model/TxPortion";
 import Log "lib/Log";
 import Types "lib/Types";
 
@@ -32,11 +33,13 @@ shared ({ caller = creator }) actor class fb() = Self {
     private stable var nextMemberId : Types.RecordId = 0;
     private stable var nextPotId : Types.RecordId = 0;
     private stable var nextTxId : Types.RecordId = 0;
+    private stable var nextTxPortionId : Types.RecordId = 0;
     stable var accounts : [Account.AccountRecord] = Account.defaultRecords();
     stable var funds : [Fund.FundRecord] = Fund.defaultRecords();
     stable var members : [Member.MemberRecord] = Member.defaultRecords();
     stable var pots : [Pot.PotRecord] = Pot.defaultRecords();
     stable var transactions : [Transaction.TransactionRecord] = Transaction.defaultRecords();
+    stable var txPortions : [TxPortion.TxPortionRecord] = TxPortion.defaultRecords();
     stable var logsEntries : [(Time.Time, Text)] = [];
 
     // In-memory stores that we can utilise during canister operation. These will be saved to stable memory during upgrades.
@@ -135,8 +138,8 @@ shared ({ caller = creator }) actor class fb() = Self {
     //  REGION:      MEMBERS       CRUD      ----------   ----------   ----------   ----------   ----------
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
 
-    public shared ({ caller }) func addMember(record: Member.Member, fund_id: ID) : async Member.MemberRecord {
-        let manager = Member.Manager(fund_id, Identity.getAccountFromPrincipal(caller), members);
+    public shared ({ caller }) func addMember(record: Member.Member) : async Member.MemberRecord {
+        let manager = Member.Manager(record.fund_id, Identity.getAccountFromPrincipal(caller), members);
         // Check and receive the record to be added with additional properties.
         nextMemberId += 1;
         let newRecord = await manager.createRecord(record, nextMemberId);
@@ -155,8 +158,8 @@ shared ({ caller = creator }) actor class fb() = Self {
         await manager.getRecords();
     };
 
-    public shared ({ caller }) func updateMember(id: ID, updated: Member.Member, fund_id: ID) : async ?Member.MemberRecord {
-        let manager = Member.Manager(fund_id, Identity.getAccountFromPrincipal(caller), members);
+    public shared ({ caller }) func updateMember(id: ID, updated: Member.Member) : async ?Member.MemberRecord {
+        let manager = Member.Manager(updated.fund_id, Identity.getAccountFromPrincipal(caller), members);
         // Check if the record can be updated. Will receive the index on success.
         let data = await manager.updateRecord(id, updated);
         let updatedRecords : [var Member.MemberRecord] = Array.thaw<Member.MemberRecord>(members);
@@ -193,8 +196,8 @@ shared ({ caller = creator }) actor class fb() = Self {
     //  REGION:       POTS         CRUD      ----------   ----------   ----------   ----------   ----------
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
 
-    public shared ({ caller }) func addPot(record: Pot.Pot, fund_id: ID) : async Pot.PotRecord {
-        let manager = Pot.Manager(fund_id, Identity.getAccountFromPrincipal(caller), pots);
+    public shared ({ caller }) func addPot(record: Pot.Pot) : async Pot.PotRecord {
+        let manager = Pot.Manager(record.fund_id, Identity.getAccountFromPrincipal(caller), pots);
         // Check and receive the record to be added with additional properties.
         nextPotId += 1;
         let newRecord = await manager.createRecord(record, nextPotId);
@@ -213,8 +216,8 @@ shared ({ caller = creator }) actor class fb() = Self {
         await manager.getRecords();
     };
 
-    public shared ({ caller }) func updatePot(id: ID, updated: Pot.Pot, fund_id: ID) : async ?Pot.PotRecord {
-        let manager = Pot.Manager(fund_id, Identity.getAccountFromPrincipal(caller), pots);
+    public shared ({ caller }) func updatePot(id: ID, updated: Pot.Pot) : async ?Pot.PotRecord {
+        let manager = Pot.Manager(updated.fund_id, Identity.getAccountFromPrincipal(caller), pots);
         // Check if the record can be updated. Will receive the index on success.
         let data = await manager.updateRecord(id, updated);
         let updatedRecords : [var Pot.PotRecord] = Array.thaw<Pot.PotRecord>(pots);
@@ -251,11 +254,11 @@ shared ({ caller = creator }) actor class fb() = Self {
     //  REGION:   TRANSACTIONS     CRUD      ----------   ----------   ----------   ----------   ----------
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
 
-    public shared ({ caller }) func addTransaction(record: Transaction.Transaction, fund_id: ID, member_id: ID) : async Transaction.TransactionRecord {
-        let manager = Transaction.Manager(fund_id, Identity.getAccountFromPrincipal(caller), transactions);
+    public shared ({ caller }) func addTransaction(record: Transaction.Transaction) : async Transaction.TransactionRecord {
+        let manager = Transaction.Manager(record.fund_id, Identity.getAccountFromPrincipal(caller), transactions);
         // Check and receive the record to be added with additional properties.
         nextTxId += 1;
-        let newRecord = await manager.createRecord(record, nextTxId, member_id);
+        let newRecord = await manager.createRecord(record, nextTxId);
         // Commit the new record to the state.
         transactions := Array.append(transactions, [newRecord]);
         return newRecord;
@@ -271,8 +274,8 @@ shared ({ caller = creator }) actor class fb() = Self {
         await manager.getRecords();
     };
 
-    public shared ({ caller }) func updateTransaction(id: ID, updated: Transaction.Transaction, fund_id: ID) : async ?Transaction.TransactionRecord {
-        let manager = Transaction.Manager(fund_id, Identity.getAccountFromPrincipal(caller), transactions);
+    public shared ({ caller }) func updateTransaction(id: ID, updated: Transaction.Transaction) : async ?Transaction.TransactionRecord {
+        let manager = Transaction.Manager(updated.fund_id, Identity.getAccountFromPrincipal(caller), transactions);
         // Check if the record can be updated. Will receive the index on success.
         let data = await manager.updateRecord(id, updated);
         let updatedRecords : [var Transaction.TransactionRecord] = Array.thaw<Transaction.TransactionRecord>(transactions);
@@ -305,16 +308,74 @@ shared ({ caller = creator }) actor class fb() = Self {
         }
     };
 
+    //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
+    //  REGION:   TRANSACTION    PORTIONS       CRUD      ----------   ----------   ----------   ----------
+    //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
+
+    public shared ({ caller }) func addTxPortion(record: TxPortion.TxPortion) : async TxPortion.TxPortionRecord {
+        let manager = TxPortion.Manager(record.fund_id, Identity.getAccountFromPrincipal(caller), txPortions);
+        // Check and receive the record to be added with additional properties.
+        nextTxPortionId += 1;
+        let newRecord = await manager.createRecord(record, nextTxPortionId);
+        // Commit the new record to the state.
+        txPortions := Array.append(txPortions, [newRecord]);
+        return newRecord;
+    };
+
+    public shared ({ caller }) func getTxPortion(id: ID, fund_id: ID) : async ?TxPortion.TxPortionRecord {
+        let manager = TxPortion.Manager(fund_id, Identity.getAccountFromPrincipal(caller), txPortions);
+        await manager.getRecord(id);
+    };
+
+    public shared ({ caller }) func getTxPortions(fund_id: ID) : async [TxPortion.TxPortionRecord] {
+        let manager = TxPortion.Manager(fund_id, Identity.getAccountFromPrincipal(caller), txPortions);
+        await manager.getRecords();
+    };
+
+    public shared ({ caller }) func updateTxPortion(id: ID, updated: TxPortion.TxPortion) : async ?TxPortion.TxPortionRecord {
+        let manager = TxPortion.Manager(updated.fund_id, Identity.getAccountFromPrincipal(caller), txPortions);
+        // Check if the record can be updated. Will receive the index on success.
+        let data = await manager.updateRecord(id, updated);
+        let updatedRecords : [var TxPortion.TxPortionRecord] = Array.thaw<TxPortion.TxPortionRecord>(txPortions);
+
+        switch (data) {
+            case (?d) {
+                // Commit the updated record to the state.
+                updatedRecords[d.index] := d.record;
+                txPortions := Array.freeze<TxPortion.TxPortionRecord>(updatedRecords);
+                return ?d.record;
+            };
+            case null return null;
+        };
+    };
+
+    public shared ({ caller }) func deleteTxPortion(id: ID, fund_id: ID) : async Bool {
+        let manager = TxPortion.Manager(fund_id, Identity.getAccountFromPrincipal(caller), txPortions);
+        // Check if the record can be deleted. Will receive the record ID on success.
+        let recordId = await manager.deleteRecord(id);
+
+        switch (recordId) {
+            case null return false;
+            case (?id) {
+                // Delete the record by removing it from the set data
+                let updatedRecords = Array.filter<TxPortion.TxPortionRecord>(txPortions, func(m) { m.id != id });
+                txPortions := updatedRecords;
+                logAndDebug(debug_show("TX_PORTIONS -> deleteRecord -> deleted record -> records", funds.size()));
+                return true;
+            }
+        }
+    };
+
 
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
     //  REGION:     ACCOUNTS       CRUD      ----------   ----------   ----------   ----------   ----------
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
 
-    public shared ({ caller }) func addAccount(record: Account.Account, fund_id: ID, member_id: ID) : async Account.AccountRecord {
-        let manager = Account.Manager(fund_id, Identity.getAccountFromPrincipal(caller), accounts);
+    public shared ({ caller }) func addAccount(record: Account.Account) : async Account.AccountRecord {
+        let manager = Account.Manager(record.fund_id, Identity.getAccountFromPrincipal(caller), accounts);
         // Check and receive the record to be added with additional properties.
         nextAccountId += 1;
-        let newRecord = await manager.createRecord(record, nextAccountId, member_id);
+        let newRecord = await manager.createRecord(record, nextAccountId);
         // Commit the new record to the state.
         accounts := Array.append(accounts, [newRecord]);
         return newRecord;
@@ -330,8 +391,8 @@ shared ({ caller = creator }) actor class fb() = Self {
         await manager.getRecords();
     };
 
-    public shared ({ caller }) func updateAccount(id: ID, updated: Account.Account, fund_id: ID) : async ?Account.AccountRecord {
-        let manager = Account.Manager(fund_id, Identity.getAccountFromPrincipal(caller), accounts);
+    public shared ({ caller }) func updateAccount(id: ID, updated: Account.Account) : async ?Account.AccountRecord {
+        let manager = Account.Manager(updated.fund_id, Identity.getAccountFromPrincipal(caller), accounts);
         // Check if the record can be updated. Will receive the index on success.
         let data = await manager.updateRecord(id, updated);
         let updatedRecords : [var Account.AccountRecord] = Array.thaw<Account.AccountRecord>(accounts);
