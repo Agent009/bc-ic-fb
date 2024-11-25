@@ -26,6 +26,13 @@ module Identity {
         };
     };
 
+    public func getAccount(principal : Principal, subaccount: Subaccount) : Account {
+        return {
+            owner = principal;
+            subaccount = Option.make(subaccount);
+        };
+    };
+
     // Returns the the total number of tokens on all accounts.
     public func totalClaimedSupply(ledger : TrieMap.TrieMap<Account, Nat>) : Nat {
         var claimed : Nat = 0;

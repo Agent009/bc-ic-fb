@@ -1,4 +1,7 @@
 import Array "mo:base/Array";
+import Blob "mo:base/Blob";
+import Option "mo:base/Option";
+import Principal "mo:base/Principal";
 import Identity "../Identity";
 import Log "../Log";
 import Types "../Types";
@@ -25,27 +28,42 @@ module Member {
 
     public func defaultRecords() : [MemberRecord] {
         return [
-            // {
-            //     id = 1;
-            //     data = {
-            //         fund_id = 1; name = "Abida Parveen"; abbreviation = "AP"; family = "Abida Family";
-            //         role = "Head"; join_date = "2022-01-01"; leave_date = null; expected_monthly_deposit = ?50.0
-            //     }
-            // },
-            // {
-            //     id = 2; 
-            //     data = {
-            //         fund_id = 1; name = "Mohammad Amir"; abbreviation = "MA"; family = "Amir Family";
-            //         role = "Head"; join_date = "2022-01-01"; leave_date = null; expected_monthly_deposit = ?300.0
-            //     }
-            // },
-            // {
-            //     id = 3; 
-            //     data = {
-            //         fund_id = 1; name = "Sonia Amir"; abbreviation = "SA"; family = "Amir Family";
-            //         role = "Participant"; join_date = "2022-01-01"; leave_date = null; expected_monthly_deposit = ?50.0
-            //     }
-            // }
+            {
+                id = 1;
+                data = {
+                    fund_id = 1;
+                    account = { 
+                        owner = Principal.fromText("7eevz-2ra7p-dsih3-3tyar-ve5rp-gfzj4-6oopo-7lno4-miffl-jj4mm-wqe"); 
+                        subaccount = Option.make(Blob.fromArray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]));
+                    };
+                    name = "Amir CX"; abbreviation = "AC"; family = "CX Family";
+                    role = "Head"; join_date = "2022-01-01"; leave_date = null; expected_monthly_deposit = ?50.0
+                }
+            },
+            {
+                id = 2; 
+                data = {
+                    fund_id = 1;
+                    account = { 
+                        owner = Principal.fromText("7eevz-2ra7p-dsih3-3tyar-ve5rp-gfzj4-6oopo-7lno4-miffl-jj4mm-wqe"); 
+                        subaccount = Option.make(Blob.fromArray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]));
+                    };
+                    name = "Amir DeFi"; abbreviation = "AD"; family = "DeFi Family";
+                    role = "Head"; join_date = "2022-01-01"; leave_date = null; expected_monthly_deposit = ?300.0
+                }
+            },
+            {
+                id = 3; 
+                data = {
+                    fund_id = 1;
+                    account = { 
+                        owner = Principal.fromText("7eevz-2ra7p-dsih3-3tyar-ve5rp-gfzj4-6oopo-7lno4-miffl-jj4mm-wqe"); 
+                        subaccount = Option.make(Blob.fromArray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3]));
+                    };
+                    name = "Umar DeFi"; abbreviation = "UD"; family = "DeFi Family";
+                    role = "Participant"; join_date = "2022-01-01"; leave_date = null; expected_monthly_deposit = ?50.0
+                }
+            }
         ];
     };
 

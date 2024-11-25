@@ -23,14 +23,54 @@ module Pot {
 
     public func defaultRecords() : [PotRecord] {
         return [
-            // {
-            //     id = 1; 
-            //     data = {
-            //         fund_id = 1; parent_pot_id = null; name = "Main Pot"; name_leaf = null;
-            //         target_perc = 100.0; starting_balance = 1000.0; starting_date = "2022-01-01";
-            //         value = 1000.0; last_transaction_date = null;
-            //     }
-            // }
+            {
+                id = 1; 
+                data = {
+                    fund_id = 1; parent_pot_id = null; name = "Main"; name_leaf = null;
+                    target_perc = 100.0; starting_balance = 0.0; starting_date = "2022-01-01";
+                    value = 0.0; last_transaction_date = null;
+                }
+            },
+            {
+                id = 2; 
+                data = {
+                    fund_id = 1; parent_pot_id = ?1; name = "Emergency Fund"; name_leaf = ?"Main -> Reserves";
+                    target_perc = 20.0; starting_balance = 0.0; starting_date = "2022-01-01";
+                    value = 0.0; last_transaction_date = null;
+                }
+            },
+            {
+                id = 3; 
+                data = {
+                    fund_id = 1; parent_pot_id = null; name = "Investments"; name_leaf = null;
+                    target_perc = 80.0; starting_balance = 0.0; starting_date = "2022-01-01";
+                    value = 0.0; last_transaction_date = null;
+                }
+            },
+            {
+                id = 4; 
+                data = {
+                    fund_id = 1; parent_pot_id = ?3; name = "Layer 1s"; name_leaf = ?"Investments -> Layer 1s";
+                    target_perc = 70.0; starting_balance = 0.0; starting_date = "2022-01-01";
+                    value = 0.0; last_transaction_date = null;
+                }
+            },
+            {
+                id = 5; 
+                data = {
+                    fund_id = 1; parent_pot_id = ?3; name = "Altcoins"; name_leaf = ?"Investments -> Altcoins";
+                    target_perc = 20.0; starting_balance = 0.0; starting_date = "2022-01-01";
+                    value = 0.0; last_transaction_date = null;
+                }
+            },
+            {
+                id = 6; 
+                data = {
+                    fund_id = 1; parent_pot_id = ?3; name = "Meme"; name_leaf = ?"Investments -> Meme";
+                    target_perc = 10.0; starting_balance = 0.0; starting_date = "2022-01-01";
+                    value = 0.0; last_transaction_date = null;
+                }
+            }
         ];
     };
 

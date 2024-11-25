@@ -18,7 +18,29 @@ module Account {
     public type AccountRecord = Types.Record<Account>;
 
     public func defaultRecords() : [AccountRecord] {
-        return [];
+        return [
+            {
+                id = 1; 
+                data = {
+                    fund_id = 1; member_id = 1; type1 = "Crypto Wallet"; name = "TL7 MM";
+                    details = null;
+                }
+            },
+            {
+                id = 2; 
+                data = {
+                    fund_id = 1; member_id = 1; type1 = "CEX"; name = "TL7 CB";
+                    details = null;
+                }
+            },
+            {
+                id = 3; 
+                data = {
+                    fund_id = 1; member_id = 1; type1 = "CEX"; name = "TL7 KC";
+                    details = null;
+                }
+            },
+        ];
     };
 
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------

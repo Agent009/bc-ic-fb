@@ -62,6 +62,18 @@ shared ({ caller = creator }) actor class fb() = Self {
         return creator;
     };
 
+    public shared ({ caller }) func getCallerAccount() : async Account {
+        return Identity.getAccountFromPrincipal(caller);
+    };
+
+    public func getICAccountFromPrincipal(principal: Principal) : async Account {
+        return Identity.getAccountFromPrincipal(principal);
+    };
+
+    public func getICAccount(principal: Principal, subaccount: Identity.Subaccount) : async Account {
+        return Identity.getAccount(principal, subaccount);
+    };
+
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
     //  REGION:      FUNDS         CRUD      ----------   ----------   ----------   ----------   ----------
     //----------   ----------   ----------   ----------   ----------   ----------   ----------   ----------
@@ -480,5 +492,36 @@ shared ({ caller = creator }) actor class fb() = Self {
     if (logs.size() > 0) {
         logAndDebug(debug_show("UpgradeManagement -> setting stable logsEntries from unstable logs", logs.size(), Array.size(logsEntries)));
         logsEntries := Iter.toArray(logs.entries());
+    };
+
+    // Set the initial records
+    if (nextFundId == 0 and Array.size(Fund.defaultRecords()) > 0) {
+        logAndDebug(debug_show("Init -> setting initial records for funds"));
+        funds := Fund.defaultRecords();
+    };
+
+    if (nextMemberId == 0 and Array.size(Member.defaultRecords()) > 0) {
+        logAndDebug(debug_show("Init -> setting initial records for members"));
+        members := Member.defaultRecords();
+    };
+
+    if (nextAccountId == 0 and Array.size(Account.defaultRecords()) > 0) {
+        logAndDebug(debug_show("Init -> setting initial records for accounts"));
+        accounts := Account.defaultRecords();
+    };
+
+    if (nextPotId == 0 and Array.size(Pot.defaultRecords()) > 0) {
+        logAndDebug(debug_show("Init -> setting initial records for pots"));
+        pots := Pot.defaultRecords();
+    };
+
+    if (nextTxId == 0 and Array.size(Transaction.defaultRecords()) > 0) {
+        logAndDebug(debug_show("Init -> setting initial records for transactions"));
+        transactions := Transaction.defaultRecords();
+    };
+
+    if (nextTxPortionId == 0 and Array.size(TxPortion.defaultRecords()) > 0) {
+        logAndDebug(debug_show("Init -> setting initial records for transaction portions"));
+        txPortions := TxPortion.defaultRecords();
     };
 }

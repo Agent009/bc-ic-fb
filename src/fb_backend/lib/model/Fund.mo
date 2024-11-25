@@ -1,4 +1,7 @@
 import Array "mo:base/Array";
+import Blob "mo:base/Blob";
+import Principal "mo:base/Principal";
+import Option "mo:base/Option";
 import Identity "../Identity";
 import Log "../Log";
 import Types "../Types";
@@ -23,12 +26,16 @@ module Fund {
 
     public func defaultRecords() : [FundRecord] {
         return [
-            // {
-            //     id = 1;
-            //     data = {
-            //         name = "Family Bank"; start_date = "2022-01-01"; closing_date = null
-            //     }
-            // }
+            {
+                id = 1;
+                data = {
+                    creator = { 
+                        owner = Principal.fromText("7eevz-2ra7p-dsih3-3tyar-ve5rp-gfzj4-6oopo-7lno4-miffl-jj4mm-wqe"); 
+                        subaccount = Option.make(Blob.fromArray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]));
+                    };
+                    name = "Family Bank"; start_date = "2022-01-01"; closing_date = null
+                }
+            }
         ];
     };
 
