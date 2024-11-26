@@ -1,3 +1,4 @@
 [dependencies]
 base = "0.13.3"
 generics = "0.0.2"
+bitcoin = "0.1.0"

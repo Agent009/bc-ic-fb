@@ -2,7 +2,8 @@
   "canisters": {
     "fb_backend": {
       "main": "src/fb_backend/main.mo",
-      "type": "motoko"
+      "type": "motoko",
+      "dependencies": ["icrc1_ledger"]
     },
     "fb_frontend": {
       "dependencies": [
@@ -24,12 +25,45 @@
       },
       "type": "custom",
       "wasm": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity_dev.wasm.gz"
+    },
+    "icrc1_index": {
+      "candid": "https://raw.githubusercontent.com/dfinity/ic/5d202894864f4db4a5a46f44422aebc80c3d321b/rs/ledger_suite/icrc1/index-ng/index-ng.did",
+      "remote": {
+        "id": {
+          "ic": "n5wcd-faaaa-aaaar-qaaea-cai"
+        }
+      },
+      "type": "custom",
+      "wasm": "https://download.dfinity.systems/ic/5d202894864f4db4a5a46f44422aebc80c3d321b/canisters/ic-icrc1-index-ng.wasm.gz"
+    },
+    "icrc1_ledger": {
+      "candid": "https://raw.githubusercontent.com/dfinity/ic/5d202894864f4db4a5a46f44422aebc80c3d321b/rs/ledger_suite/icrc1/ledger/ledger.did",
+      
+      "remote": {
+        "id": {
+          "ic": "mxzaz-hqaaa-aaaar-qaada-cai"
+        }
+      },
+      "type": "custom",
+      "wasm": "https://download.dfinity.systems/ic/5d202894864f4db4a5a46f44422aebc80c3d321b/canisters/ic-icrc1-ledger.wasm.gz"
     }
   },
   "defaults": {
+    "bitcoin": {
+      "enabled": true,
+      "nodes": [
+        "127.0.0.1:18444"
+      ],
+      "log_level": "info"
+    },
     "build": {
       "args": "",
       "packtool": "mops sources"
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:4943"
     }
   },
   "output_env_file": ".env",
